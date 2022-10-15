@@ -1,10 +1,13 @@
 import mysql from 'mysql'
+import { config } from 'dotenv'
+
+config()
 
 const db = mysql.createPool({
-    host: "frmlpng7.beget.tech",
-    user: "frmlpng7_ask",
-    database: "frmlpng7_ask",
-    password: "MyAsk101"
+    host: process.env.HOST_DB,
+    user: process.env.USER_DB,
+    database: process.env.NAME_DB,
+    password: process.env.PASS_DB 
 })
 
 export default db
