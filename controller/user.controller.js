@@ -80,6 +80,7 @@ class UserController {
         res.json(err);
         console.log(err);
       } else {
+        data[0].avatar = Buffer.from(data[0].avatar).toString('base64');
         res.json(data);
       }
     });
