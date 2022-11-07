@@ -67,7 +67,8 @@ class UserController {
         if (passwordRes) {
           const { id, email } = data[0];
           const token = generateToken(id, email);
-          res.json({token, id});
+          res.json({token, ...data[0]});
+          
         }
       }
     });

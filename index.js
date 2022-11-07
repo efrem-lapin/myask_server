@@ -3,6 +3,7 @@ import * as dotenv from "dotenv"
 import mysql from "mysql"
 import cors from "cors"
 import userRouter from "./routes/user.routes.js"
+import questionRouter from "./routes/question.routes.js"
 import db from "./db.js"
 
 dotenv.config()
@@ -24,5 +25,6 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api', userRouter)
+app.use('/api', questionRouter)
 
 app.listen(PORT, () => console.log(`Server started on ${PORT} port`))
