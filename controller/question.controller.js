@@ -23,12 +23,12 @@ class QuestionController {
     db.query(
       `SELECT * FROM question WHERE answerer = ?`,
       [id],
-      async (err, row1) => {
+      async (err, data) => {
         if (err) {
           res.json(err);
           console.log(err);
         } else {
-           res.json(data)
+          res.json(data);
         }
       }
     );
