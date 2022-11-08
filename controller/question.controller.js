@@ -21,7 +21,7 @@ class QuestionController {
   async getUnansweredQuestion(req, res) {
     const id = req.params.id;
     db.query(
-      `SELECT * FROM question WHERE answerer = ?`,
+      `SELECT * FROM question WHERE answerer = ? AND success = false ORDER BY id DESC`,
       [id],
       async (err, data) => {
         if (err) {
@@ -34,7 +34,7 @@ class QuestionController {
     );
   }
   async postQuestion(req, res) {
-    const { questioner, question, answerer } = req.body;
+    const { questioner, question, answerer} = req.body;
 
     db.query(
       `INSERT INTO question (questioner, question, answer, success, answerer) VALUES(?, ?, ?, ?, ?)`,
@@ -50,6 +50,20 @@ class QuestionController {
       }
     );
   }
+
+  async postAnswer(req, res) {
+    const {id, answer} = req.body
+
+    db.query(`UPDATE question SET answer = ?, success = TRUE WHERE id = ?`, [answer, id], (err, data) => {
+      if (err) {
+        res.json(err);
+        console.log(err);
+      } else {
+        data.message = "Вы ответили на впорос!";
+        res.json(data);
+      }
+    })
+  } 
 }
 
 export default new QuestionController();
