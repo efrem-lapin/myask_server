@@ -3,9 +3,9 @@ import questionController from "../controller/question.controller.js";
 
 const questionRouter = new Router();
 
-// questionRouter.get("/questions")
-questionRouter.post("/ask", questionController.postQuestion)
-questionRouter.get("/questions:id", questionController.getUnansweredQuestion)
-questionRouter.post("/answer", questionController.postAnswer)
+questionRouter.post("/ask", questionController.setQuestion);
+questionRouter.get("/questions:id", questionController.getUnansweredQuestion);
+questionRouter.post("/answer", questionController.setAnswer);
+questionRouter.get("/answers:id", questionController.getAnswers);
 
 export default questionRouter;
