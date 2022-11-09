@@ -27,7 +27,7 @@ class QuestionController {
   async getUnansweredQuestion(req, res) {
     const idAnswerer = req.params.id;
     db.query(
-      `SELECT * 
+      `SELECT question.question, question.id AS id, user.username, user.avatar
        FROM question INNER JOIN user ON question.questioner = user.id
        WHERE answerer = ? AND success = false
        ORDER BY question.id DESC`,
@@ -37,7 +37,7 @@ class QuestionController {
           res.json(err);
           console.log(err);
         } else {
-          data.forEach(item => {
+          await data.forEach(item => {
             item.avatar = Buffer.from(data[0].avatar).toString("base64");
           });
           res.json(data);
@@ -91,7 +91,7 @@ class QuestionController {
     const { id, answer } = req.body;
 
     db.query(
-      `UPDATE question SET answer = ?, success = TRUE WHERE id = ?`,
+      `UPDATE question SET answer = ?, success = true WHERE id = ?`,
       [answer, id],
       (err, data) => {
         if (err) {
