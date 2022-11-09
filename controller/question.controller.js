@@ -5,13 +5,17 @@ class QuestionController {
     const { id } = req.body;
 
     db.query(
-      `SELECT * from question WHERE answerer = ? AND success = true`,
+      `SELECT * 
+       FROM question INNER JOIN user ON question.questioner = user.id
+       WHERE answerer = ? AND success = true
+       ORDER BY question.id DESC`,
       [id],
       (err, data) => {
         if (err) {
           res.json(err);
           console.log(err);
         } else {
+          data[0].avatar = Buffer.from(data[0].avatar).toString("base64");
           res.json(data);
         }
       }
@@ -21,13 +25,17 @@ class QuestionController {
   async getUnansweredQuestion(req, res) {
     const idAnswerer = req.params.id;
     db.query(
-      `SELECT * FROM question WHERE answerer = ? AND success = false ORDER BY id DESC`,
+      `SELECT * 
+       FROM question INNER JOIN user ON question.questioner = user.id
+       WHERE answerer = ? AND success = false
+       ORDER BY question.id DESC`,
       [idAnswerer],
       async (err, data) => {
         if (err) {
           res.json(err);
           console.log(err);
         } else {
+          data[0].avatar = Buffer.from(data[0].avatar).toString("base64");
           res.json(data);
         }
       }
@@ -35,16 +43,22 @@ class QuestionController {
   }
 
   async getAnswers(req, res) {
-    const idAnswerer  = req.params.id;
+    const idAnswerer = req.params.id;
 
     db.query(
-      `SELECT * FROM question WHERE answerer = ? AND success = true ORDER BY id DESC`,
+      `SELECT question.*, user.username, user.avatar 
+       FROM question INNER JOIN user ON question.questioner = user.id
+       WHERE answerer = ? AND success = true
+       ORDER BY question.id DESC`,
       [idAnswerer],
       (err, data) => {
         if (err) {
           res.json(err);
           console.log(err);
         } else {
+          data.forEach(item => {
+            item.avatar = Buffer.from(data[0].avatar).toString("base64");
+          });
           res.json(data);
         }
       }
