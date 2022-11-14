@@ -95,6 +95,20 @@ class QuestionController {
       }
     );
   }
+
+  async removeQuestion(req, res) {
+    const idQuestion = req.body.id;
+
+    db.query(`DELETE FROM question WHERE id= ?`, [idQuestion], (err, data) => {
+      if (err) {
+        res.json(err);
+        console.log(err);
+      } else {
+        data.message = "Вопрос удален";
+        res.json(data);
+      }
+    })
+  }
 }
 
 export default new QuestionController();
