@@ -1,48 +1,39 @@
 import db from "../db.js";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { config } from "dotenv";
+import TokenService from "../service/token-service.js";
+import UserService from "../service/user-service.js";
 
 config();
 
-const generateToken = (id, email) => {
-  const payload = {
-    id,
-    email,
-  };
-
-  const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: "30m",
-  });
-  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: "30d",
-  });
-
-  return {
-    accessToken,
-    refreshToken,
-  };
-};
-
 class UserController {
-  async createUser(req, res) {
+  async registration(req, res) {
     const { username, email, password } = req.body;
+    const isExist = await UserService.checkUserByEmail(email);
 
-    const salt = bcrypt.genSaltSync(10);
-    const hashPassword = bcrypt.hashSync(password, salt);
-    db.query(
-      `INSERT INTO user (username, email, password) VALUES (?, ?, ?)`,
-      [username, email, hashPassword],
-      (err, data) => {
-        if (err) {
-          res.json(err);
-          console.log(err);
-        } else {
-          data.message = "Вы зарегистрировались!";
-          res.json(data);
-        }
-      }
-    );
+    if (!isExist) {
+      const salt = bcrypt.genSaltSync(10);
+      const hashPassword = bcrypt.hashSync(password, salt);
+
+      const createdUser = await UserService.createUser({
+        username,
+        email,
+        hashPassword,
+      });
+      const tokens = TokenService.generateTokens({ username, email });
+
+      data.token = tokens.accessToken;
+      data.message = "Вы зарегистрировались!";
+
+      res.cookie("token", tokens.refreshToken, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+      });
+      res.json({ id: createdUser.id });
+    } else {
+      data.message = "Такой пользователь уже зарегистрирован!";
+      res.json();
+    }
   }
 
   async getUsers(req, res) {
@@ -56,7 +47,7 @@ class UserController {
     });
   }
 
-  async logUser(req, res) {
+  async login(req, res) {
     const { email, password } = req.body;
     db.query(`SELECT * FROM user WHERE email = ?`, [email], (err, data) => {
       if (err) {
@@ -65,9 +56,13 @@ class UserController {
       } else {
         const passwordRes = bcrypt.compareSync(password, data[0].password);
         if (passwordRes) {
-          const { id, email } = data[0];
-          const token = generateToken(id, email);
-          res.json({token, ...data[0]});
+          const { id, email, status, avatar, username } = data[0];
+          const tokens = TokenService.generateTokens({ id, email });
+          res.cookie("token", tokens.refreshToken, {
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+          });
+          res.json({ token: tokens.accessToken, id, username, status, avatar });
         }
       }
     });

@@ -5,6 +5,7 @@ import cors from "cors"
 import userRouter from "./routes/user.routes.js"
 import questionRouter from "./routes/question.routes.js"
 import db from "./db.js"
+import cookieParser from "cookie-parser";
 
 dotenv.config()
 
@@ -23,6 +24,7 @@ db.getConnection(err => {
 
 app.use(cors())
 app.use(express.json())
+app.use(cookieParser())
 
 app.use('/api', userRouter)
 app.use('/api', questionRouter)

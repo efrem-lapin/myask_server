@@ -6,7 +6,7 @@ const questionRouter = new Router();
 questionRouter.post("/ask", questionController.setQuestion);
 questionRouter.get("/questions:id", questionController.getUnansweredQuestion);
 questionRouter.post("/answer", questionController.setAnswer);
-questionRouter.get("/answers:id", questionController.getAnswers);
+questionRouter.get("/answers/:id", questionController.getAnswers);
 questionRouter.post("/remove", questionController.removeQuestion);
 
 export default questionRouter;
