@@ -1,113 +1,142 @@
-import db from "../db.js";
+import { Like, Question, User } from "../models/models.js";
+import jwt from "jsonwebtoken";
 
 class QuestionController {
-  async getSuccessQuestion(req, res) {
-    const { id } = req.body;
+  async getSuccessQuestion(req, res, next) {
+    try {
+      const { id } = req.body;
+      const questions = Question.findAll({
+        where: { answerer: id, success: true },
+        order: [["id", "DESC"]],
+      });
 
-    db.query(
-      `SELECT * 
-       FROM question INNER JOIN user ON question.questioner = user.id
-       WHERE answerer = ? AND success = true
-       ORDER BY question.id DESC`,
-      [id],
-      (err, data) => {
-        if (err) {
-          res.json(err);
-          console.log(err);
-        } else {
-          res.json(data);
-        }
-      }
-    );
+      res.json(questions);
+    } catch (error) {
+      next(error);
+    }
   }
 
-  async getUnansweredQuestion(req, res) {
-    const idAnswerer = req.params.id;
-    db.query(
-      `SELECT question.question, question.id AS id, user.username, user.avatar
-       FROM question INNER JOIN user ON question.questioner = user.id
-       WHERE answerer = ? AND success = false
-       ORDER BY question.id DESC`,
-      [idAnswerer],
-      async (err, data) => {
-        if (err) {
-          res.json(err);
-          console.log(err);
-        } else {
-          res.json(data);
-        }
-      }
-    );
+  async getUnansweredQuestion(req, res, next) {
+    try {
+      const id = Number(req.params.id);
+      const questions = await Question.findAll({
+        where: { answerer: id, success: false },
+        attributes: ["id", "question"],
+        order: [["id", "DESC"]],
+        include: [
+          {
+            model: User,
+            as: "questionerData",
+            attributes: ["id", "name", "surname", "avatar"],
+          },
+        ],
+      });
+      res.json(questions);
+    } catch (error) {
+      next(error);
+    }
   }
 
   async getAnswers(req, res) {
-    const idAnswerer = req.params.id;
+    const id = req.params.id;
+    const questions = await Question.findAll({
+      where: { answerer: id, success: true },
+      include: [
+        {
+          model: Like,
+          as: "likes",
+          attributes: ["likerId"],
+        },
+        {
+          model: User,
+          as: "answererData",
+          attributes: ["id", "name", "surname", "avatar"],
+        },
 
-    db.query(
-      `SELECT question.*, user.username, user.avatar 
-       FROM question INNER JOIN user ON question.questioner = user.id
-       WHERE answerer = ? AND success = true
-       ORDER BY question.id DESC`,
-      [idAnswerer],
-      (err, data) => {
-        if (err) {
-          res.json(err);
-          console.log(err);
-        } else {
-          res.json(data);
-        }
-      }
-    );
+        {
+          model: User,
+          as: "questionerData",
+          attributes: ["id", "name", "surname", "avatar"],
+        },
+      ],
+      order: [["id", "DESC"]],
+    });
+    res.json(questions);
   }
 
-  async setQuestion(req, res) {
-    const { questioner, question, answerer } = req.body;
+  async setQuestion(req, res, next) {
+    try {
+      const token = req.headers.authorization.slice(7);
+      const validToken = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+      if (validToken) {
+        const { questioner, question, answerer } = req.body;
+        const resQuestion = await Question.create({
+          questioner,
+          question,
+          answerer,
+        });
 
-    db.query(
-      `INSERT INTO question (questioner, question, answer, success, answerer) VALUES(?, ?, ?, ?, ?)`,
-      [questioner, question, "", false, answerer],
-      (err, data) => {
-        if (err) {
-          res.json(err);
-          console.log(err);
-        } else {
-          data.message = "Вопрос отправлен!";
-          res.json(data);
-        }
+        res.json({ message: "Ваш вопрос отправлен" });
       }
-    );
+    } catch (error) {
+      next(error);
+    }
   }
 
-  async setAnswer(req, res) {
-    const { id, answer } = req.body;
-
-    db.query(
-      `UPDATE question SET answer = ?, success = true WHERE id = ?`,
-      [answer, id],
-      (err, data) => {
-        if (err) {
-          res.json(err);
-          console.log(err);
-        } else {
-          data.message = "Вы ответили на впорос!";
-          res.json(data);
-        }
-      }
-    );
+  async setAnswer(req, res, next) {
+    try {
+      const { id, answer } = req.body;
+      const question = await Question.findOne({ where: { id } });
+      question.answer = answer;
+      question.success = true;
+      question.save();
+      res.json({ message: "Вы ответили на вопрос" });
+    } catch (error) {
+      next(error);
+    }
   }
 
-  async removeQuestion(req, res) {
-    const idQuestion = req.body.id;
+  async removeQuestion(req, res, next) {
+    try {
+      const questionId = req.body.id;
+      await Like.destroy({ where: { questionId } });
+      await Question.destroy({ where: { id: questionId } });
+      res.json({ message: "Вопрос удален" });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-    db.query(`DELETE FROM question WHERE id= ?`, [idQuestion], (err, data) => {
-      if (err) {
-        res.json(err);
-        console.log(err);
-      } else {
-        data.message = "Вопрос удален";
-        res.json(data);
-      }
-    })
+  async getLastAnswers(req, res, next) {
+    try {
+      const answers = await Question.findAll({
+        where: { success: true },
+        include: [
+          {
+            model: Like,
+            as: "likes",
+            attributes: ["likerId"],
+          },
+          {
+            model: User,
+            as: "answererData",
+            attributes: ["id", "name", "surname", "avatar"],
+          },
+
+          {
+            model: User,
+            as: "questionerData",
+            attributes: ["id", "name", "surname", "avatar"],
+          },
+        ],
+        order: [["id", "DESC"]],
+        limit: 10,
+        offset: 0,
+      });
+      res.json(answers);
+    } catch (error) {
+      next(error);
+    }
   }
 }
 

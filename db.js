@@ -1,13 +1,14 @@
-import mysql from 'mysql'
-import { config } from 'dotenv'
+import { Sequelize } from "sequelize";
+import { config } from "dotenv";
 
-config()
+config();
 
-const db = mysql.createPool({
-    host: process.env.HOST_DB,
-    user: process.env.USER_DB,
-    database: process.env.NAME_DB,
-    password: process.env.PASS_DB 
-})
-
-export default db
+export default new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASS,
+  {
+    dialect: "mysql",
+    host: process.env.DB_HOST,
+  }
+);
