@@ -4,7 +4,6 @@ import UserDto from "../dtos/UserDto.js";
 import ApiError from "../exceptions/ApiError.js";
 import { Like, Question, Subscription, User } from "../models/models.js";
 import jwt from "jsonwebtoken";
-import * as fs from 'fs/promises';
 
 class UserController {
   async registration(req, res, next) {
@@ -18,12 +17,14 @@ class UserController {
         surname
       );
 
-      res.cookie("token", data.token, {
-        maxAge: process.env.JWT_TIME_REFRESH,
-        httpOnly: true,
-      });
+      if (data) {
+        res.cookie("token", data.token, {
+          maxAge: process.env.JWT_TIME_REFRESH,
+          httpOnly: true,
+        });
 
-      res.json({ message: "Вы зарегистрировались", user: data.user });
+        res.json({ message: "Вы зарегистрировались", user: data.user });
+      }
     } catch (error) {
       next(error);
     }
@@ -34,13 +35,15 @@ class UserController {
       const { email, password } = req.body;
       const userData = await UserService.login(email, password);
 
-      res.cookie("token", userData.tokens.refreshToken, {
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        httpOnly: true,
-      });
+      if (userData) {
+        res.cookie("token", userData.tokens.refreshToken, {
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+          httpOnly: true,
+        });
 
-      const userDto = new UserDto(userData.user);
-      res.json({ user: userDto, token: userData.tokens.accessToken });
+        const userDto = new UserDto(userData.user);
+        res.json({ user: userDto, token: userData.tokens.accessToken });
+      }
     } catch (error) {
       next(error);
     }
@@ -109,39 +112,74 @@ class UserController {
   }
   async changeUserData(req, res, next) {
     try {
-      // const {name, surname, password, avatar} = req.data;
       const { token } = req.cookies;
       const dataJwt = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
       if (!dataJwt) {
         throw "Token error";
       }
 
-      const avatar = req.files.avatar;
+      const id = dataJwt.id;
+      const user = await User.findOne({ where: { id } });
+
+      const avatar = req?.files?.avatar;
       if (avatar) {
         const avatarName = encodeURI(Date.now() + "-" + avatar.name);
-        const path =`${process.cwd()}\\uploads\\avatars\\${avatarName}`;
+        const path = `${process.cwd()}\\uploads\\avatars\\${avatarName}`;
+        const pathDB = `${process.env.HOST}/api/img/${avatarName}`;
 
         avatar.mv(path, (err) => {
           if (err) console.log(err);
           return res.status(500).send(err);
         });
 
-        const id = dataJwt.id;
-
-        const user = await User.findOne({ where: { id } });
         const link = user.avatar;
 
-        console.log(link)
-
+        // delete prev avatar
         // await fs.unlink(link, err => {
         //   if(err) console.log(err);
         // })
-        
-        user.avatar = path;
+
+        user.avatar = pathDB;
+        user.save();
+      }
+
+      // formating strings name and surname
+      const { name, surname } = req.body,
+        formatName = UserService.formatName(name),
+        formatSurname = UserService.formatName(surname);
+
+      // checking for changes
+      if (formatName !== user.name) {
+        user.name = formatName;
+        user.save();
+      }
+
+       // checking for changes
+      if (formatSurname !== user.surname) {
+        user.surname = formatSurname;
         user.save();
       }
     } catch (error) {
       next(error);
+    }
+  }
+
+  async logout(req, res, next) {
+    try {
+      const { token } = req.cookies;
+      const dataJwt = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+      if (!dataJwt) {
+        throw "Token error";
+      }
+
+      const user = await User.findOne({where: {id: dataJwt.id}});
+      user.token = "";
+      user.save();
+
+      res.clearCookie("token", { secure: true, httpOnly: true }).json({message: "OK"});
+    } catch (error) {
+      next(error)
     }
   }
 }

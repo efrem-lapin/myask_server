@@ -11,6 +11,9 @@ class UserService {
       throw ApiError.badRequest("Такой пользователь уже существует");
     }
 
+    const formatName = this.formatName(name);
+    const formatSurname = this.formatName(surname);
+
     const salt = bcrypt.genSaltSync(10);
     const hashPassword = bcrypt.hashSync(password, salt);
     const tokens = tokenService.generateTokens({ name, email });
@@ -18,16 +21,13 @@ class UserService {
     const createdUser = await User.create({
       email,
       password: hashPassword,
-      name,
-      surname,
+      name: formatName,
+      surname: formatSurname,
     });
 
-    await tokenService.saveRefreshToken(
-      createdUser.id,
-      tokens.refreshToken
-    );
+    await tokenService.saveRefreshToken(createdUser.id, tokens.refreshToken);
 
-    return {user: createdUser, token: tokens.accessToken};
+    return { user: createdUser, token: tokens.accessToken };
   }
 
   async login(email, password) {
@@ -42,7 +42,7 @@ class UserService {
           email: user.email,
         });
 
-        return { user: user, tokens};
+        return { user: user, tokens };
       }
       throw ApiError.badRequest("Неверный логин или пароль");
     }
@@ -60,6 +60,10 @@ class UserService {
     const user = await User.findOne({ where: { email } });
     if (user) return user;
     throw ApiError.badRequest("Пользователя с таким email не существует");
+  }
+
+  formatName(str) {
+    return str[0].toUpperCase() + str.slice(1);
   }
 }
 

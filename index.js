@@ -26,6 +26,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(fileUpload())
+app.use('/api/img', express.static('./uploads/avatars'))
 
 app.use("/api", userRouter);
 app.use("/api", questionRouter);
