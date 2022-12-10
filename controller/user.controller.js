@@ -121,7 +121,7 @@ class UserController {
       const id = dataJwt.id;
       const user = await User.findOne({ where: { id } });
 
-      const avatar = req?.files?.avatar;
+      const avatar = req.files.avatar;
       if (avatar) {
         const avatarName = encodeURI(Date.now() + "-" + avatar.name);
         const path = `${process.cwd()}\\uploads\\avatars\\${avatarName}`;
