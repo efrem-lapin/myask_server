@@ -8,7 +8,7 @@ class UserService {
     const isExist = await User.findOne({ where: { email } });
 
     if (isExist) {
-      throw ApiError.badRequest("Такой пользователь уже существует");
+      throw ApiError.badRequest("Этот email уже используется");
     }
 
     const formatName = this.formatName(name);
@@ -44,6 +44,7 @@ class UserService {
 
         return { user: user, tokens };
       }
+
       throw ApiError.badRequest("Неверный логин или пароль");
     }
 

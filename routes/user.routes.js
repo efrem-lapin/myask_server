@@ -9,8 +9,8 @@ userRouter.get("/refresh", userController.refreshToken);
 userRouter.get("/logout", userController.logout);
 // userRouter.get("/users", userController.getUsers);
 userRouter.get("/user/:id", userController.getOneUser);
-userRouter.put("/user/:id", userController.updateUser);
 userRouter.delete("/user/:id", userController.deleteUser);
-userRouter.post("/user/change", userController.changeUserData);
+userRouter.put("/user/update", userController.updateUser);
+userRouter.put("/user/status", userController.updateStatus);
 
 export default userRouter;

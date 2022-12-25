@@ -35,6 +35,10 @@ class UserController {
       const { email, password } = req.body;
       const userData = await UserService.login(email, password);
 
+      if (!userData) {
+        throw "Неверный email или пароль";
+      }
+
       if (userData) {
         res.cookie("token", userData.tokens.refreshToken, {
           maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -73,8 +77,6 @@ class UserController {
 
   async getUsers(req, res) {}
 
-  async updateUser(req, res) {}
-
   async deleteUser(req, res) {}
 
   async refreshToken(req, res, next) {
@@ -110,18 +112,19 @@ class UserController {
       next(error);
     }
   }
-  async changeUserData(req, res, next) {
+  async updateUser(req, res, next) {
     try {
-      const { token } = req.cookies;
-      const dataJwt = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-      if (!dataJwt) {
+      const token = req.headers.authorization.slice(7);
+      const validToken = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+
+      if (!validToken) {
         throw "Token error";
       }
 
-      const id = dataJwt.id;
-      const user = await User.findOne({ where: { id } });
+      const email = validToken.email;
+      const user = await User.findOne({ where: { email } });
 
-      const avatar = req.files.avatar;
+      const avatar = req.files && req.files.avatar;
       if (avatar) {
         const avatarName = encodeURI(Date.now() + "-" + avatar.name);
         const path = `${process.cwd()}\\uploads\\avatars\\${avatarName}`;
@@ -154,11 +157,13 @@ class UserController {
         user.save();
       }
 
-       // checking for changes
+      // checking for changes
       if (formatSurname !== user.surname) {
         user.surname = formatSurname;
         user.save();
       }
+
+      res.json({ message: "user updated" });
     } catch (error) {
       next(error);
     }
@@ -173,13 +178,36 @@ class UserController {
         throw "Token error";
       }
 
-      const user = await User.findOne({where: {id: dataJwt.id}});
+      const user = await User.findOne({ where: { id: dataJwt.id } });
       user.token = "";
       user.save();
 
-      res.clearCookie("token", { secure: true, httpOnly: true }).json({message: "OK"});
+      res
+        .clearCookie("token", { secure: true, httpOnly: true })
+        .json({ message: "OK" });
     } catch (error) {
-      next(error)
+      next(error);
+    }
+  }
+
+  async updateStatus(req, res, next) {
+    try {
+      const token = req.headers.authorization.slice(7);
+      const validToken = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+
+      if (!validToken) {
+        throw "Token error";
+      }
+
+      const { status, id } = req.body;
+
+      const user = await User.findOne({ where: { id } });
+      user.status = status;
+      user.save();
+
+      res.json({message: "Статус изменён"})
+    } catch (error) {
+      next(error);
     }
   }
 }
